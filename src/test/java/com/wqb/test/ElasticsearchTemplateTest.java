@@ -28,8 +28,9 @@ public class ElasticsearchTemplateTest {
 
     private Client client;
     private SearchRequestBuilder searchRequestBuilder;
+
     @Before
-    public void testBefore(){
+    public void testBefore() {
         client = elasticsearchTemplate.getClient();
         searchRequestBuilder = client.prepareSearch("call_think_log_201810")
                 .setTypes("call_think_log");
@@ -62,5 +63,30 @@ public class ElasticsearchTemplateTest {
                 .build();
         searchRequestBuilder.setQuery(searchQuery.getQuery());
         System.out.println(searchRequestBuilder.toString());
+    }
+
+    @Test
+    public void pageQueryFromSizeTest() {
+        SearchResponse searchResponse = searchRequestBuilder.setQuery(QueryBuilders.matchAllQuery())
+                .setFrom(10).setSize(5).execute().actionGet();
+        SearchHits searchHits = searchResponse.getHits();
+        searchHits.forEach(hit -> {
+            System.out.println(hit.getSourceAsString());
+        });
+    }
+
+    @Test
+    public void scrollScanTest() {
+        SearchQuery searchQuery = new NativeSearchQueryBuilder().
+                withQuery(QueryBuilders.constantScoreQuery(QueryBuilders
+                        .termQuery("cus_phone", "13882314639")))
+                .build();
+        elasticsearchTemplate
+                .startScroll(5000L, searchQuery, CallThinkLog.class).forEach(
+                callThinkLog -> {
+                    System.out.println(callThinkLog.toString());
+                }
+        );
+
     }
 }
