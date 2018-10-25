@@ -6,8 +6,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.bucket.filters.Filters;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,6 +20,9 @@ import org.springframework.data.elasticsearch.core.query.SearchQuery;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
@@ -116,7 +119,7 @@ public class ElasticsearchTemplateTest {
     public void termsTest() {
         SearchQuery searchQuery = new NativeSearchQueryBuilder().
                 withQuery(QueryBuilders
-                        .termsQuery("cus_phone", "13882314639","15532589612"))
+                        .termsQuery("cus_phone", "13882314639", "15532589612"))
                 .build();
         searchRequestBuilder.setQuery(searchQuery.getQuery());
         System.out.println(searchRequestBuilder.toString());
@@ -135,12 +138,58 @@ public class ElasticsearchTemplateTest {
     }
 
     @Test
-    public void rangeTest() {
+    public void rangeTest() throws Exception {
         SearchQuery searchQuery = new NativeSearchQueryBuilder().
-                withQuery(QueryBuilders.constantScoreQuery(QueryBuilders
-                        .termQuery("cus_phone", "13882314639")).boost(2.0f))
+                withQuery(QueryBuilders.rangeQuery("conn_secs").from(600).to(1000))
                 .build();
         searchRequestBuilder.setQuery(searchQuery.getQuery());
         System.out.println(searchRequestBuilder.toString());
+
+        List<CallThinkLog> callThinkLogList = elasticsearchTemplate.queryForList(searchQuery, CallThinkLog.class);
+        callThinkLogList.forEach(callThinkLog -> System.out.println(callThinkLog.toString()));
+
+
+        searchQuery = new NativeSearchQueryBuilder().
+                withQuery(QueryBuilders.rangeQuery("abc").from(new Date())
+                        .to(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2018-12-31 23:59:59")))
+                .build();
+        searchRequestBuilder.setQuery(searchQuery.getQuery());
+        System.out.println(searchRequestBuilder.toString());
+
+
+        searchQuery = new NativeSearchQueryBuilder().
+                withQuery(QueryBuilders.rangeQuery("abc").gt("now-1h"))
+                .build();
+        searchRequestBuilder.setQuery(searchQuery.getQuery());
+        System.out.println(searchRequestBuilder.toString());
+    }
+
+    @Test
+    public void nullTest() {
+        SearchQuery searchQuery = new NativeSearchQueryBuilder().
+                withQuery(QueryBuilders.existsQuery("vcc_id"))
+                .build();
+        searchRequestBuilder.setQuery(searchQuery.getQuery());
+        System.out.println(searchRequestBuilder.toString());
+
+        SearchResponse searchResponse = searchRequestBuilder.setQuery(searchQuery.getQuery()).execute().actionGet();
+        SearchHits searchHits = searchResponse.getHits();
+        searchHits.forEach(hit -> {
+            System.out.println(hit.getSourceAsString());
+        });
+
+
+        searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery("vcc_id")))
+                .build();
+        searchRequestBuilder.setQuery(searchQuery.getQuery());
+        System.out.println(searchRequestBuilder.toString());
+
+        searchResponse = searchRequestBuilder.setQuery(searchQuery.getQuery()).execute().actionGet();
+        searchHits = searchResponse.getHits();
+        searchHits.forEach(hit -> {
+            System.out.println(hit.getSourceAsString());
+        });
+
     }
 }

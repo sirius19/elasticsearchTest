@@ -342,6 +342,7 @@ public class CallThinkLog implements Serializable {
 
     @Override
     public String toString() {
-        return this.id + "," + this.cusPhone + "," + this.agName + "," + this.agId + "," + this.agNum;
+        return this.id + "," + this.cusPhone + "," + this.agName + "," + this.agId + "," + this.agNum
+                +","+this.connSecs;
     }
 }
